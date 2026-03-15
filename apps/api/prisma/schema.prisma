@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLIENT
+  PHOTOGRAPHER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  PAID_DEPOSIT
+  SHOOT_COMPLETED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  HELD_IN_ESCROW
+  RELEASED
+  REFUNDED
+}
+
+model User {
+  id             String      @id @default(uuid())
+  email          String      @unique
+  password       String
+  role           Role        @default(CLIENT)
+  firstName      String?
+  lastName       String?
+  profilePicture String?
+  location       String?
+  bio            String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  
+  // Photographer Relations
+  portfolio      Portfolio?
+  ReceivedBookings Booking[]   @relation("PhotographerBookings")
+  
+  // Client Relations
+  SentBookings   Booking[]   @relation("ClientBookings")
+  ReviewsGiven   Review[]    @relation("ClientReviews")
+  ReviewsReceived Review[]   @relation("PhotographerReviews")
+}
+
+model Portfolio {
+  id             String      @id @default(uuid())
+  photographerId String      @unique
+  photographer   User        @relation(fields: [photographerId], references: [id])
+  specialties    String[]    // e.g. ["Wedding", "Portrait"]
+  hourlyRate     Float?
+  albums         Album[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model Album {
+  id             String      @id @default(uuid())
+  title          String
+  description    String?
+  portfolioId    String
+  portfolio      Portfolio   @relation(fields: [portfolioId], references: [id])
+  photos         Photo[]
+  createdAt      DateTime    @default(now())
+}
+
+model Photo {
+  id             String      @id @default(uuid())
+  url            String
+  watermarkedUrl String?
+  albumId        String?
+  album          Album?      @relation(fields: [albumId], references: [id])
+  bookingId      String?
+  booking        Booking?    @relation(fields: [bookingId], references: [id])
+  createdAt      DateTime    @default(now())
+}
+
+model Booking {
+  id             String        @id @default(uuid())
+  clientId       String
+  client         User          @relation("ClientBookings", fields: [clientId], references: [id])
+  photographerId String
+  photographer   User          @relation("PhotographerBookings", fields: [photographerId], references: [id])
+  
+  status         BookingStatus @default(PENDING)
+  shootDate      DateTime
+  totalAmount    Float
+  depositAmount  Float
+  notes          String?
+  
+  payment        Payment?
+  deliverables   Photo[]       // Photos delivered for this booking
+  review         Review?
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  bookingId      String        @unique
+  booking        Booking       @relation(fields: [bookingId], references: [id])
+  stripeIntentId String?       @unique
+  amount         Float
+  status         PaymentStatus @default(PENDING)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Review {
+  id             String      @id @default(uuid())
+  bookingId      String      @unique
+  booking        Booking     @relation(fields: [bookingId], references: [id])
+  clientId       String
+  client         User        @relation("ClientReviews", fields: [clientId], references: [id])
+  photographerId String
+  photographer   User        @relation("PhotographerReviews", fields: [photographerId], references: [id])
+  rating         Int         // 1-5
+  comment        String?
+  createdAt      DateTime    @default(now())
+}
