@@ -16,6 +16,13 @@ node_modules/
 **/.env.*
 *.env.txt
 **/old_config_backup.env.txt
+# Explicit: apps/api env and env-backup text files
+apps/api/.env
+apps/api/.env.*
+apps/api/*.env
+apps/api/*.env.*
+apps/api/*.env.txt
+apps/api/*.txt
 
 # Build outputs
 dist/
